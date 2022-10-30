@@ -65,10 +65,14 @@ def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size
                 {'params': CNN_net.CNN.ln0.parameters()},
                 {'params': CNN_net.DNN1_net.parameters()},
                 {'params': CNN_net.DNN2_net.parameters()}],  lr=lr) 
-    optimizer_window = optim.Adam([
-                {'params': CNN_net.CNN.mask.parameters()},
-                {'params': CNN_net.CNN.sampling.parameters()}],  lr=lr) 
-    # optimizer = optim.RMSprop(CNN_net.parameters(), lr=lr,alpha=0.95, eps=1e-8) 
+
+    optimize_parameters = []
+    if mask!='':
+        optimize_parameters.append({'params': CNN_net.CNN.mask.parameters()})
+    if sampling!='':
+        optimize_parameters.append({'params': CNN_net.CNN.sampling.parameters()})
+    optimizer_window = optim.Adam(optimize_parameters,  lr=lr) 
+    
     cost = nn.NLLLoss()
     if penalty>0:
         if mask!='':

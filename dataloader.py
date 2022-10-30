@@ -8,8 +8,8 @@ import os
 
 class TIMIT(Dataset):
     """ Data loader"""
-    def __init__(self, lst:list, wlen:int, wshift:int, fact_amp=0):
-        self.data_folder = '/home/aditthapron/2022/Masking/TIMIT/'
+    def __init__(self, lst:list, wlen:int, wshift:int, fact_amp=0, Train = False):
+        self.data_folder = 'PATH_TO_NORMALIZED_TIMIT_DATASET'
         self.wav_lst = ReadList(lst)
         self.lab_dict=np.load('data_lists/TIMIT_labels.npy', allow_pickle=True).item()
         self.N_snt=len(self.wav_lst)
@@ -18,11 +18,15 @@ class TIMIT(Dataset):
         self.wshift = wshift
         self.fr = np.zeros(self.N_snt) #self.idx keep number of accumalating sample for each wav
         self.total_fr = 0
+        self.train = Train # if True randomly removed x seconds, 0<x<self.wlen at beginnning and self.wlen-x at the end of each audio 
+        
         #get total number of sample
-
         for i in range(self.N_snt):
             f = sf.SoundFile(self.data_folder+self.wav_lst[i])
-            self.total_fr += int((f.frames-self.wlen)/(self.wshift))
+            if self.train:
+                self.total_fr += int((f.frames-2*self.wlen)/(self.wshift))
+            else:
+                self.total_fr += int((f.frames-self.wlen)/(self.wshift))
             self.fr[i] = self.total_fr
 
     def __getitem__(self, idx):
@@ -32,6 +36,9 @@ class TIMIT(Dataset):
         for i in range(self.N_snt):
             if idx < self.fr[i]:
                 [signal, fs] = sf.read(self.data_folder+self.wav_lst[i])
+                if self.train:
+                    removed_frame = np.random.randint(self.wlen)
+                    signal = signal[removed_frame:-(self.wlen-removed_frame)]
                 channels = len(signal.shape)
                 if channels == 2:
                     signal = signal[:,0]
@@ -85,8 +92,8 @@ def ReadList(list_file):
 
 
 def get_dataloader(loader_name,wlen,wshift):
-    dataset_train = str_to_class(loader_name)('data_lists/TIMIT_train.scp',wlen,wshift,fact_amp=0.2)
-    dataset_val = str_to_class(loader_name)('data_lists/TIMIT_test.scp',wlen,wshift,fact_amp=0)
+    dataset_train = str_to_class(loader_name)('data_lists/TIMIT_train.scp',wlen,wshift,fact_amp=0.2,Train=True)
+    dataset_val = str_to_class(loader_name)('data_lists/TIMIT_test.scp',wlen,wshift,fact_amp=0,Train=False)
     data_loader_train = DataLoader(dataset_train, batch_size=128, shuffle=True, num_workers=len(os.sched_getaffinity(0)),drop_last=True)
     data_loader_val = DataLoader(dataset_val, batch_size=128, shuffle=False, num_workers=len(os.sched_getaffinity(0)),drop_last=False)
     return data_loader_train,data_loader_val
