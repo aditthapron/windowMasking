@@ -3,9 +3,9 @@
 This repository contains codes used to reproduce speaker recognition results in "Masking Kernel for Learning Energy-Efficient Representations for Speaker Recognition and Mobile Health" paper.
 Masking kernel is introduced to optimize winow length and sampling rate of input speech as energy-efficient parameters, together with other parameters in the DNN model.
 
-To demonstate compatibility of our methods with various speech features and DNN model, we include [AM-MobileNet1D](https://github.com/joaoantoniocn/AM-MobileNet1D) branch for MFCC, Spectrogram and Raw audio, and [Sincnet](https://github.com/mravanelli/SincNet) on raw audio. For  SincNet please change branch to SincNet.
+To demonstate compatibility of our methods with various speech features and DNN model, we include [AM-MobileNet1D](https://github.com/joaoantoniocn/AM-MobileNet1D) branch for MFCC, Spectrogram and Raw audio, and [Sincnet](https://github.com/mravanelli/SincNet) on raw audio. For SincNet please change branch to SincNet.
   
-
+For result and limitation, please chech readme file in SincNet branch.
 
 ## Instruction
 
