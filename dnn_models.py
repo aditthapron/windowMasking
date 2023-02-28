@@ -1,3 +1,11 @@
+# Created by
+# Mirco Ravanelli 
+# Mila - University of Montreal 
+
+# Jan 2023
+# Modified by Apiwat Ditthapron
+# Add Masking layers
+
 import numpy as np
 import torch
 import torch.nn.functional as F
