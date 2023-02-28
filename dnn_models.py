@@ -1,3 +1,28 @@
+# Created by
+# Mirco Ravanelli 
+# Mila - University of Montreal 
+
+# July 2018
+# ------------------
+# Modified by
+# Joao Antonio Chagas Nunes
+# Universidade Federal de Pernambuco
+
+# Add AM-Softmax loss function
+# December 2018
+# ------------------
+# Modified by
+# Joao Antonio Chagas Nunes
+# Universidade Federal de Pernambuco
+
+# Add MobileNet1D and AM-MobileNet1D
+# January 2020
+# ------------------
+
+# Jan 2023
+# Modified by Apiwat Ditthapron
+# Add Masking layers
+
 import numpy as np
 import torch
 import torch.nn.functional as F
