@@ -1,8 +1,9 @@
-## MASKING KERNEL FOR LEARNING ENERGY-EFFICIENT SPEECH REPRESENTATION
+## Masking Kernel for Learning Energy-Efficient Representations for Speaker Recognition and Mobile Health
 
-This repository contains codes used to reproduce speaker recognition results in "Masking Kernel for Learning Energy-Efficient Speech Representation" paper.
+This repository contains codes used to reproduce speaker recognition results in "Masking Kernel for Learning Energy-Efficient Representations for Speaker Recognition and Mobile Health" paper.
 Masking kernel is introduced to optimize winow length and sampling rate of input speech as energy-efficient parameters, together with other parameters in the DNN model.
-The method is compatible with most deep learning models, but we only include the [Sincnet](https://github.com/mravanelli/SincNet), a speaker recognition model using TIMIT corpus, and CNN in this repository.
+To demonstate compatibility of our methods with various speech features and DNN model, we include [Sincnet](https://github.com/mravanelli/SincNet), a speaker recognition model on raw audio.
+Please checkout AM-MobileNet1D branch for MFCC, Spectrogram and Raw audio.  
 
 
 ## Instruction
