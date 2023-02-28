@@ -12,9 +12,11 @@ from collections import deque
 from datetime import datetime
 from itertools import count
 import tensorflow as tf
+from dnn_models import MobileNetV2
 from dnn_models import get_model
 from dataloader import get_dataloader
 from thop import profile
+
 
 class PenaltyLoss(nn.modules.loss._Loss):
     def __init__(self,alpha = 1, win_len_init =8000):
@@ -38,7 +40,33 @@ class PenaltyLoss(nn.modules.loss._Loss):
         return penalty
 
 
-def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size,lr,n_val,valid_every,seed,save,print_training,comment):
+class AdditiveMarginSoftmax(nn.Module):
+    # AMSoftmax
+    def __init__(self, margin=0.5, s=30):
+        super().__init__()
+
+        self.m = margin #
+        self.s = s
+        self.epsilon = 0.000000000001
+        print('AMSoftmax m = ' + str(margin))
+
+    def forward(self, predicted, target):
+
+        # ------------ AM Softmax ------------ #
+        predicted = predicted / (predicted.norm(p=2, dim=0) + self.epsilon)
+        indexes = range(predicted.size(0))
+        cos_theta_y = predicted[indexes, target]
+        cos_theta_y_m = cos_theta_y - self.m
+        exp_s = np.e ** (self.s * cos_theta_y_m)
+
+        sum_cos_theta_j = (np.e ** (predicted * self.s)).sum(dim=1) - (np.e ** (predicted[indexes, target] * self.s))
+
+        log = -torch.log(exp_s/(exp_s+sum_cos_theta_j+self.epsilon)).mean()
+
+        return log
+
+
+def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size,lr,n_val,valid_every,seed,save,print_training):
     if mask.lower()  =="false":
         mask=''
     if sampling.lower()  =="false":
@@ -51,29 +79,27 @@ def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size
     wshift=int(fs*w_shift/1000.00)
 
     #setting up model
-    
     CNN_net = get_model(model,wlen,fs,mask,hard_mask,sampling).to(device)
 
     #setting up dataloader
     data_loader_train,data_loader_val = get_dataloader(dataset,wlen,wshift)
     train_iter = iter(data_loader_train)
-    # RMSprop
+
     optimizer_CNN = optim.Adam([
-                {'params': CNN_net.CNN.conv.parameters()},
-                {'params': CNN_net.CNN.bn.parameters()},
-                {'params': CNN_net.CNN.ln.parameters()},
-                {'params': CNN_net.CNN.ln0.parameters()},
-                {'params': CNN_net.DNN1_net.parameters()},
-                {'params': CNN_net.DNN2_net.parameters()}],  lr=lr) 
+                {'params': CNN_net.features.parameters()},
+                {'params': CNN_net.classifier.parameters()},
+                {'params': CNN_net.normalize.parameters()}],  lr=lr) 
 
     optimize_parameters = []
     if mask!='':
-        optimize_parameters.append({'params': CNN_net.CNN.mask.parameters()})
+        optimize_parameters.append({'params': CNN_net.mask.parameters()})
     if sampling!='':
-        optimize_parameters.append({'params': CNN_net.CNN.sampling.parameters()})
-    optimizer_window = optim.Adam(optimize_parameters,  lr=lr) 
+        optimize_parameters.append({'params': CNN_net.sampling.parameters()})
+    if mask!='' or sampling!='':
+        optimizer_window = optim.Adam(optimize_parameters,  lr=lr) 
     
-    cost = nn.NLLLoss()
+    # cost = nn.NLLLoss()
+    cost = AdditiveMarginSoftmax()
     if penalty>0:
         if mask!='':
             penalty_window = PenaltyLoss(penalty, win_len_init = wlen)
@@ -100,7 +126,6 @@ def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size
     
     # start training
     for step in count(start=1):
-
         try:
             batch,label,_ = next(train_iter)
         except:
@@ -108,10 +133,12 @@ def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size
             batch,label,_ = next(train_iter)
         batch,label = batch.to(device),label.flatten().to(device)
         pout = CNN_net(batch)
+        
         pred=torch.max(pout,dim=1)[1]
         loss = cost(pout, label.long())
         optimizer_CNN.zero_grad()
-        optimizer_window.zero_grad()
+        if mask!='' or sampling!='':
+            optimizer_window.zero_grad()
         # optimizer.zero_grad()
         if penalty>0:
             sum_loss = loss
@@ -126,7 +153,7 @@ def train(model,dataset,w_len,w_shift,mask,hard_mask,sampling,penalty,batch_size
         optimizer_CNN.step()
         optimizer_CNN.zero_grad()
         # optimizer.step()
-        if step % 32==1: #set to 1 to avoid updating on validation epoch
+        if step % 16==1 and (mask!='' or sampling!=''): #set to 1 to avoid updating on validation epoch
             optimizer_window.step()
             optimizer_window.zero_grad()
 
@@ -221,14 +248,14 @@ class Logger(object):
 
 if __name__ == "__main__":
     PARSER = ArgumentParser()
-    PARSER.add_argument("--model", type=str, default='SincNet')
+    PARSER.add_argument("--model", type=str, default='MobileNetV2')
     PARSER.add_argument("--dataset", type=str, default='TIMIT')
     PARSER.add_argument("--w_len", type=int, default=500)
     PARSER.add_argument("--w_shift", type=int, default=10)
-    PARSER.add_argument("--mask", type=str, default='hann')
+    PARSER.add_argument("--mask", type=str, default='hamming')
     PARSER.add_argument("--hard_mask", type=ast.literal_eval, default=True)
     PARSER.add_argument("--sampling", type=str, default='FFT')
-    PARSER.add_argument("--penalty", type=float, default=0.1)
+    PARSER.add_argument("--penalty", type=float, default=0.001)
     PARSER.add_argument("--batch_size", type=int, default=128)
     PARSER.add_argument("--lr", type=float, default=0.001)
     PARSER.add_argument("--n_val", type=int, default=120) 
@@ -236,5 +263,4 @@ if __name__ == "__main__":
     PARSER.add_argument("--seed", type=int, default=42)
     PARSER.add_argument("--save", type=ast.literal_eval, default=False)
     PARSER.add_argument("--print_training", type=ast.literal_eval, default=False)
-    PARSER.add_argument("--comment", type=str, default='')
     train(**vars(PARSER.parse_args()))
