@@ -92,14 +92,15 @@ class SamplingRateFFT(nn.Module):
         self.dim=dim
         self.factor = float(8000)
         self.r_masking = nn.Parameter(torch.tensor([1.0], requires_grad=True))
-        self.w_space = nn.Parameter(torch.tensor(rfftfreq(self.dim,1/self.init_freq)), requires_grad=True)
+        
 
     def forward(self,x):
+        self.w_space = nn.Parameter(torch.tensor(rfftfreq(x.shape[-1],1/self.init_freq)), requires_grad=True)
         f_signal = torch.fft.rfft(x)
         mask = torch.min(torch.ones_like(self.w_space),torch.max(torch.zeros_like(self.w_space),-(self.w_space - self.factor*self.r_masking)/self.smooth))
-        # mask = torch.min(torch.ones_like(self.w_space),torch.max(torch.zeros_like(self.w_space),-1/(self.factor*self.r_masking) * self.w_space +1 - self.smooth/(self.factor*self.r_masking) ))
         f_signal = f_signal*mask
-        f_signal = f_signal[:int(self.factor*self.r_masking)]
+        f_signal = f_signal[:,:,:int(((self.factor*self.r_masking))/self.factor*self.w_space.shape[0])]
+
         return torch.fft.irfft(f_signal).float()
 
     def get_sr(self):
@@ -550,10 +551,11 @@ class Sinc_CNN_CNN(nn.Module):
         seq_len=x.shape[1]
         x=x.view(batch,1,seq_len)
         #Masking
-        if self.sampling is not '':
-            x = self.sampling(x)
         if self.mask is not '':
             x = self.mask(x)
+        if self.sampling is not '':
+            x = self.sampling(x)
+
 
         if bool(self.cnn_use_laynorm_inp):
             x=self.ln0((x))
@@ -647,10 +649,10 @@ class CNN_CNN_CNN(nn.Module):
         x=x.view(batch,1,seq_len)
 
         #Masking
-        if self.sampling is not '':
-            x = self.sampling(x)
         if self.mask is not '':
             x = self.mask(x)
+        if self.sampling is not '':
+            x = self.sampling(x)
 
         for i in range(self.N_cnn_lay):
             if self.cnn_use_laynorm[i]:
