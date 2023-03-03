@@ -111,14 +111,15 @@ class SamplingRateFFT(nn.Module):
         self.dim=dim
         self.factor = float(8000)
         self.r_masking = nn.Parameter(torch.tensor([1.0], requires_grad=True))
-        self.w_space = nn.Parameter(torch.tensor(rfftfreq(self.dim,1/self.init_freq)), requires_grad=True)
+        
 
     def forward(self,x):
+        self.w_space = nn.Parameter(torch.tensor(rfftfreq(x.shape[-1],1/self.init_freq)), requires_grad=True)
         f_signal = torch.fft.rfft(x)
         mask = torch.min(torch.ones_like(self.w_space),torch.max(torch.zeros_like(self.w_space),-(self.w_space - self.factor*self.r_masking)/self.smooth))
-        # mask = torch.min(torch.ones_like(self.w_space),torch.max(torch.zeros_like(self.w_space),-1/(self.factor*self.r_masking) * self.w_space +1 - self.smooth/(self.factor*self.r_masking) ))
         f_signal = f_signal*mask
-        f_signal = f_signal[:int(self.factor*self.r_masking)]
+        f_signal = f_signal[:,:,:int(((self.factor*self.r_masking))/self.factor*self.w_space.shape[0])]
+
         return torch.fft.irfft(f_signal).float()
 
     def get_sr(self):
@@ -304,12 +305,12 @@ class MobileNetV2(nn.Module):
             # x = self.normalize(x)
             x = x.reshape([x.shape[0], 1, x.shape[1]])
             # x = self.maxpool1d(x)
-        #Masking
-        if self.sampling is not '':
-            x = self.sampling(x)
+        #Maskingd
+
         if self.mask is not '':
             x = self.mask(x)
-        
+        if self.sampling is not '':
+            x = self.sampling(x)
 
         x = self.features(x)
         x = x.mean(2)
@@ -426,10 +427,11 @@ class MobileNetV2_MFCC(nn.Module):
             # x = self.maxpool1d(x)
 
         #Masking
-        if self.sampling is not '':
-            x = self.sampling(x)
         if self.mask is not '':
             x = self.mask(x)
+        if self.sampling is not '':
+            x = self.sampling(x)
+
 
         x = self.MFCC_transform(x)
         x = x.reshape([x.shape[0], x.shape[2], x.shape[3]])
@@ -549,10 +551,11 @@ class MobileNetV2_spectrogram(nn.Module):
             # x = self.maxpool1d(x)
 
         #Masking
-        if self.sampling is not '':
-            x = self.sampling(x)
         if self.mask is not '':
             x = self.mask(x)
+        if self.sampling is not '':
+            x = self.sampling(x)
+
 
         x = self.spectrogram_transform(x)
         x = x.reshape([x.shape[0], x.shape[2], x.shape[3]])
