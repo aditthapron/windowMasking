@@ -29,5 +29,5 @@ SincNet model
 
 ### Overfitting to penalty term
 Training and validatio losses (tr_err,te_err) reported in the results do not include penalty term.
-Based on the result of [hamming window](https://github.com/aditthapron/windowMasking/blob/main/Results/Hamming_penalty_1e-1.out) with a random seed value of 1, training errors (tr_err) are in a range of (0.005,0.020) until epoch 88 that training loss keeps increasing, which is caused by penalty loss value. At around epoch 88, the optimizer overoptimizes the penalty term -- keep decreasing the signal length with less optimization done on the main network -- and, in turn, increases training loss. Hence, we only include results up to epoch 100 in the paper and report best performance before the overoptimization occurs (based on training loss).
+Based on the result of hamming window with a random seed value of 1, training errors (tr_err) are in a range of (0.005,0.020) until epoch 88 that training loss keeps increasing, which is caused by penalty loss value. At around epoch 88, the optimizer overoptimizes the penalty term -- keep decreasing the signal length with less optimization done on the main network -- and, in turn, increases training loss. Hence, we only include results up to epoch 100 in the paper and report best performance before the overoptimization occurs (based on training loss).
 
