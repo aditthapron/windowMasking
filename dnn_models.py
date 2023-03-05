@@ -3,7 +3,7 @@
 # Mila - University of Montreal 
 
 # Jan 2023
-# Modified by Apiwat Ditthapron
+# Modified by double-blind 
 # Add Masking layers
 
 import numpy as np
